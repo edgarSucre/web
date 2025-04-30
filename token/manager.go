@@ -2,8 +2,6 @@ package token
 
 import (
 	"errors"
-	"fmt"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -34,18 +32,13 @@ func NewJWTMaker(secretKey, issuer string) (*JWTManager, error) {
 	}, nil
 }
 
-func (manager *JWTManager) CreateToken(username, audience string, duration time.Duration) (string, error) {
-	claims, err := manager.newClaims(username, audience, duration)
-	if err != nil {
-		return "", fmt.Errorf("unable to create token claims: %w", err)
-	}
-
+func (manager *JWTManager) CreateToken(claims Claims) (string, error) {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return jwtToken.SignedString([]byte(manager.secretKey))
 }
 
-func (manager *JWTManager) VerifyToken(token string) (string, error) {
+func (manager *JWTManager) VerifyToken(token string) (Claims, error) {
 	keyFunc := func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return "", ErrInvalidToken
@@ -57,16 +50,16 @@ func (manager *JWTManager) VerifyToken(token string) (string, error) {
 	jwtToken, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, keyFunc)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return "", ErrExpiredToken
+			return Claims{}, ErrExpiredToken
 		}
 
-		return "", ErrInvalidToken
+		return Claims{}, ErrInvalidToken
 	}
 
-	claims, ok := jwtToken.Claims.(*jwt.RegisteredClaims)
+	claims, ok := jwtToken.Claims.(Claims)
 	if !ok {
-		return "", ErrInvalidToken
+		return Claims{}, ErrInvalidToken
 	}
 
-	return claims.Subject, nil
+	return claims, nil
 }

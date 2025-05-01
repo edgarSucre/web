@@ -29,29 +29,57 @@ func JwtMiddlewareHandler(
 			return
 		}
 
-		auth := r.Header.Get(authHeader)
-
-		if len(auth) == 0 {
-			err := fmt.Sprintf("missing %s header", authHeader)
-			http.Error(w, err, http.StatusUnauthorized)
-
-			return
-		}
-
-		if !strings.HasPrefix(auth, bearerPrefix) {
-			err := fmt.Sprintf("missing %s token", bearerPrefix)
-			http.Error(w, err, http.StatusUnauthorized)
-			return
-		}
-
-		claims, err := verifier.VerifyToken(auth[len(bearerPrefix)+1:])
+		ctx, err := jwtCheck(r, verifier)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
-			return
 		}
-
-		ctx := context.WithValue(r.Context(), web.ClaimsKey, claims)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func JwtMiddlewareHandlerFunc(
+	next http.HandlerFunc,
+	verifier TokenManager,
+	skipper HttpSkipper,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if skipper(r) {
+			next(w, r)
+		}
+
+		ctx, err := jwtCheck(r, verifier)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		}
+
+		next(w, r.WithContext(ctx))
+	}
+}
+
+var (
+	ErrNoAuthHeader   = fmt.Errorf("%s header is required", authHeader)
+	ErrNoBearerPrefix = fmt.Errorf("missing %s token", bearerPrefix)
+)
+
+func jwtCheck(
+	r *http.Request,
+	verifier TokenManager,
+) (context.Context, error) {
+	auth := r.Header.Get(authHeader)
+
+	if len(auth) == 0 {
+		return nil, ErrNoAuthHeader
+	}
+
+	if !strings.HasPrefix(auth, bearerPrefix) {
+		return nil, ErrNoBearerPrefix
+	}
+
+	claims, err := verifier.VerifyToken(auth[len(bearerPrefix)+1:])
+	if err != nil {
+		return nil, err
+	}
+
+	return context.WithValue(r.Context(), web.ClaimsKey, claims), nil
 }

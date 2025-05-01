@@ -2,6 +2,8 @@ package token
 
 import (
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -32,7 +34,17 @@ func NewJWTMaker(secretKey, issuer string) (*JWTManager, error) {
 	}, nil
 }
 
-func (manager *JWTManager) CreateToken(claims Claims) (string, error) {
+func (manager *JWTManager) CreateToken(
+	username string,
+	audience string,
+	duration time.Duration,
+	content map[string]any,
+) (string, error) {
+	claims, err := manager.createClaims(username, audience, duration, content, "jwt")
+	if err != nil {
+		return "", fmt.Errorf("could not create jwt: %w", err)
+	}
+
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return jwtToken.SignedString([]byte(manager.secretKey))
@@ -59,6 +71,10 @@ func (manager *JWTManager) VerifyToken(token string) (Claims, error) {
 	claims, ok := jwtToken.Claims.(Claims)
 	if !ok {
 		return Claims{}, ErrInvalidToken
+	}
+
+	if err := claims.valid("jwt"); err != nil {
+		return Claims{}, err
 	}
 
 	return claims, nil

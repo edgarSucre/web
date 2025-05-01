@@ -10,15 +10,29 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	content map[string]any
+	content   map[string]any
+	tokenType string
 }
 
-func (manager JWTManager) CreateClaims(
+func (c Claims) valid(tokenType string) error {
+	if c.tokenType != tokenType {
+		return ErrInvalidToken
+	}
+
+	if time.Now().After(c.ExpiresAt.Time) {
+		return ErrExpiredToken
+	}
+
+	return nil
+}
+
+func (manager JWTManager) createClaims(
 	username string,
 	audience string,
 	duration time.Duration,
 	content map[string]any,
-) (jwt.Claims, error) {
+	tokenType string,
+) (Claims, error) {
 	tokenID, err := uuid.NewRandom()
 	if err != nil {
 		return Claims{}, fmt.Errorf("could not generate token id: %w", err)

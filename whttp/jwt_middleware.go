@@ -6,22 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/edgarsucre/web/token"
-)
-
-type CtxKey int
-
-const (
-	ClaimsKey CtxKey = iota
+	"github.com/edgarsucre/web"
 )
 
 type (
 	HttpSkipper func(*http.Request) bool
-
-	TokenManager interface {
-		VerifyToken(token string) (token.Claims, error)
-		CreateToken(claims token.Claims) (string, error)
-	}
 )
 
 const (
@@ -61,7 +50,7 @@ func JwtMiddlewareHandler(
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), ClaimsKey, claims)
+		ctx := context.WithValue(r.Context(), web.ClaimsKey, claims)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

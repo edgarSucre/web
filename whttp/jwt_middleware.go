@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	HttpSkipper func(*http.Request) bool
+	Skipper func(*http.Request) bool
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 func JwtMiddlewareHandler(
 	next http.Handler,
 	verifier TokenManager,
-	skipper HttpSkipper,
+	skipper Skipper,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if skipper(r) {
@@ -41,7 +41,7 @@ func JwtMiddlewareHandler(
 func JwtMiddlewareHandlerFunc(
 	next http.HandlerFunc,
 	verifier TokenManager,
-	skipper HttpSkipper,
+	skipper Skipper,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if skipper(r) {

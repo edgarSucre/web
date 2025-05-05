@@ -7,10 +7,11 @@ type (
 )
 
 const (
-	contentType                                 = "Content-Type"
+	ContentType                                 = "Content-Type"
 	ApplicationFormUrlEncoded ContentTypeHeader = "application/x-www-form-urlencoded"
 	ApplicationJSON           ContentTypeHeader = "application/json"
 	Css                       ContentTypeHeader = "text/css"
+	Html                      ContentTypeHeader = "text/html"
 	Javascript                ContentTypeHeader = "text/javascript"
 	MultiPartForm             ContentTypeHeader = "multipart/form-data"
 	UTF8                      ContentTypeHeader = "charset=utf-8"
@@ -18,7 +19,13 @@ const (
 
 func SetContentType(he http.Header, types ...ContentTypeHeader) {
 	for _, h := range types {
-		he.Add(contentType, string(h))
+		he.Add(ContentType, string(h))
 	}
 
+}
+
+const RequestID = "X-Request-ID"
+
+func SetRequestID(he http.Header, id string) {
+	he.Set(RequestID, id)
 }

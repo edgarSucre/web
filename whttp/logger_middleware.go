@@ -2,9 +2,13 @@ package whttp
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
+
+	"github.com/edgarsucre/web"
 )
 
 type LoggerOpt func(logger *slog.Logger, r *http.Request) *slog.Logger
@@ -12,8 +16,9 @@ type LoggerOpt func(logger *slog.Logger, r *http.Request) *slog.Logger
 func WithHeaders(headers []string) LoggerOpt {
 	return func(logger *slog.Logger, r *http.Request) *slog.Logger {
 		attrs := []any{}
-		for _, header := range headers {
-			attrs = append(attrs, slog.String(header, r.Header.Get(header)))
+		for _, headerKey := range headers {
+			headerContent := strings.Join(r.Header[headerKey], "; ")
+			attrs = append(attrs, slog.String(headerKey, headerContent))
 		}
 
 		g := slog.Group("headers", attrs...)
@@ -45,7 +50,11 @@ func LoggerMiddleware(
 		}
 
 		lw := &LoggerWriter{ResponseWriter: w}
-		next.ServeHTTP(lw, r)
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, web.LoggerKey, logger)
+
+		next.ServeHTTP(lw, r.WithContext(ctx))
 
 		logger.Info("request", "status", lw.status)
 	})

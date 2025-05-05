@@ -27,5 +27,6 @@ func SetContentType(he http.Header, types ...ContentTypeHeader) {
 const RequestID = "X-Request-ID"
 
 func SetRequestID(he http.Header, id string) {
-	he.Set(RequestID, id)
+	// avoid header capitalization
+	he[RequestID] = []string{id}
 }

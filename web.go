@@ -4,4 +4,5 @@ type ctxKey int
 
 const (
 	ClaimsKey ctxKey = iota
+	LoggerKey
 )

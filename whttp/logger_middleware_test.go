@@ -16,6 +16,9 @@ import (
 func TestLoggerMIddleware(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		msg := r.URL.Query().Get("msg")
+		ct := r.Header.Get(header.ContentType)
+
+		_ = ct
 
 		status := r.URL.Query().Get("status")
 		intStatus, _ := strconv.Atoi(status)
@@ -31,7 +34,7 @@ func TestLoggerMIddleware(t *testing.T) {
 	}))
 
 	reqWithHeaders := httptest.NewRequest(http.MethodGet, "/test?status=205&msg=withHeaders", nil)
-	header.SetContentType(reqWithHeaders.Header, header.ApplicationJSON)
+	header.SetContentType(reqWithHeaders.Header, header.ApplicationJSON, header.UTF8)
 	header.SetRequestID(reqWithHeaders.Header, "request_id")
 
 	type opts struct {
@@ -89,7 +92,7 @@ func TestLoggerMIddleware(t *testing.T) {
 				assert.Contains(t, content, "msg=request")
 				assert.Contains(t, content, "status=205")
 				assert.Contains(t, content, "headers.X-Request-ID=request_id")
-				assert.Contains(t, content, "headers.Content-Type=application/json")
+				assert.Contains(t, content, "headers.Content-Type=\"application/json; charset=utf-8\"")
 			},
 		},
 	}

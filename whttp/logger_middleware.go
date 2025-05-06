@@ -9,22 +9,20 @@ import (
 	"strings"
 
 	"github.com/edgarsucre/web"
+	"github.com/edgarsucre/web/whttp/header"
 )
 
-type LoggerOpt func(logger *slog.Logger, r *http.Request) *slog.Logger
+type LoggerOpt func(r *http.Request) slog.Attr
 
 func WithHeaders(headers []string) LoggerOpt {
-	return func(logger *slog.Logger, r *http.Request) *slog.Logger {
+	return func(r *http.Request) slog.Attr {
 		attrs := []any{}
 		for _, headerKey := range headers {
 			headerContent := strings.Join(r.Header[headerKey], "; ")
 			attrs = append(attrs, slog.String(headerKey, headerContent))
 		}
 
-		g := slog.Group("headers", attrs...)
-		logger = logger.With(g)
-
-		return logger
+		return slog.Group("headers", attrs...)
 	}
 }
 
@@ -35,28 +33,33 @@ func LoggerMiddleware(
 	opts ...LoggerOpt,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if skipper(r) {
+		if skipper != nil && skipper(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		logger = logger.With(
-			"method", r.Method,
-			"path", r.URL.Path,
-		)
-
-		for _, opt := range opts {
-			logger = opt(logger, r)
+		attrs := make([]any, len(opts))
+		for i, fn := range opts {
+			attrs[i] = fn(r)
 		}
 
-		lw := &LoggerWriter{ResponseWriter: w}
+		request := slog.Group("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"requestID", r.Header.Get(header.RequestID),
+		)
+
+		attrs = append(attrs, request)
 
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, web.LoggerKey, logger)
+		ctx = context.WithValue(ctx, web.LoggerKey, logger.With(request))
 
+		lw := &LoggerWriter{ResponseWriter: w}
 		next.ServeHTTP(lw, r.WithContext(ctx))
 
-		logger.Info("request", "status", lw.status)
+		attrs = append(attrs, slog.Int("status", lw.status))
+
+		logger.Info("http request", attrs...)
 	})
 }
 

@@ -73,7 +73,7 @@ func TestLoggerMIddleware(t *testing.T) {
 				assert.Equal(t, rec.Body.String(), "testing")
 
 				content := writer.String()
-				assert.Contains(t, content, "msg=request")
+				assert.Contains(t, content, "msg=\"http request\"")
 				assert.Contains(t, content, "status=201")
 			},
 		},
@@ -89,7 +89,7 @@ func TestLoggerMIddleware(t *testing.T) {
 				assert.Equal(t, rec.Body.String(), "withHeaders")
 
 				content := writer.String()
-				assert.Contains(t, content, "msg=request")
+				assert.Contains(t, content, "msg=\"http request\"")
 				assert.Contains(t, content, "status=205")
 				assert.Contains(t, content, "headers.X-Request-ID=request_id")
 				assert.Contains(t, content, "headers.Content-Type=\"application/json; charset=utf-8\"")
